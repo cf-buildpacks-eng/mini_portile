@@ -254,11 +254,18 @@ private
 
       raise "key download failed" unless system("gpg --keyserver pgpkeys.mit.edu --recv-key #{gpg[:key]} 2>&1")
 
-      fingerprint     = `gpg --status-fd 1 --fingerprint #{gpg[:key]} 2>&1`
-      key_fingerprint = fingerprint.match(/Key fingerprint = (.*)$/)[1].gsub(/[^A-Z0-9]/, '')
+      fingerprint = `gpg --status-fd 1 --fingerprint #{gpg[:key]} 2>&1`
 
-      gpg_status      = `gpg --status-fd 1 --verify #{sig_file.path} #{file[:local_path]} 2>&1`
-      raise "signature mismatch" unless gpg_status.match(/^\[GNUPG:\] VALIDSIG #{key_fingerprint}/)
+      key_sections = fingerprint.split("pub   ")
+
+      non_revoked_key_section = key_sections.select do |key_section|
+        !key_section.empty? && !key_section.include?("[revoked")
+      end.first
+
+      non_revoked_key_fingerprint = non_revoked_key_section.match(/Key fingerprint = (.*)$/)[1].gsub(/[^A-Z0-9]/, '')
+      gpg_status = `gpg --status-fd 1 --verify #{sig_file.path} #{file[:local_path]} 2>&1`
+
+      raise "signature mismatch" unless gpg_status.match(/^\[GNUPG:\] VALIDSIG #{non_revoked_key_fingerprint}/)
     else
       digest = case
         when exp=file[:sha256] then Digest::SHA256
