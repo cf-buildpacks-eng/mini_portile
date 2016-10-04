@@ -266,6 +266,16 @@ private
       gpg_status = `gpg --status-fd 1 --verify #{sig_file.path} #{file[:local_path]} 2>&1`
 
       raise "signature mismatch" unless gpg_status.match(/^\[GNUPG:\] VALIDSIG #{non_revoked_key_fingerprint}/)
+    elsif file.has_key?(:git)
+      commit_sha = file[:git][:commit_sha]
+      git_dir = file[:git][:dir]
+
+      Dir.chdir(git_dir) do
+        local_sha = `git rev-parse HEAD`.strip
+        unless local_sha == commit_sha
+          raise "Invalid commit sha, expected: #{commit_sha}, got: #{local_sha}"
+        end
+      end
     else
       digest = case
         when exp=file[:sha256] then Digest::SHA256
