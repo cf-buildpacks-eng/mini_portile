@@ -49,7 +49,7 @@ class MiniPortile
 
   def download
     files_hashs.each do |file|
-      download_file(file[:url], file[:local_path])
+      download_file(file[:url], file[:local_path], file.has_key?(:git))
       verify_file(file)
     end
   end
@@ -268,7 +268,7 @@ private
       raise "signature mismatch" unless gpg_status.match(/^\[GNUPG:\] VALIDSIG #{non_revoked_key_fingerprint}/)
     elsif file.has_key?(:git)
       commit_sha = file[:git][:commit_sha]
-      git_dir = file[:git][:dir]
+      git_dir = file[:local_path]
 
       Dir.chdir(git_dir) do
         local_sha = `git rev-parse HEAD`.strip
@@ -422,21 +422,31 @@ private
 
   # Slighly modified from RubyInstaller uri_ext, Rubinius configure
   # and adaptations of Wayne's RailsInstaller
-  def download_file(url, full_path, count = 3)
+  def download_file(url, full_path, git_repo = false, count = 3)
     return if File.exist?(full_path)
-    uri = URI.parse(url)
+
     begin
-      case uri.scheme.downcase
-      when /ftp/
-        download_file_ftp(uri, full_path)
-      when /http|https/
-        download_file_http(url, full_path, count)
+      if git_repo
+        clone_git_repo(url, version, full_path)
+      else
+        uri = URI.parse(url)
+        case uri.scheme.downcase
+        when /ftp/
+          download_file_ftp(uri, full_path)
+        when /http|https/
+          download_file_http(url, full_path, count)
+        end
       end
+
     rescue Exception => e
       File.unlink full_path if File.exist?(full_path)
       output "ERROR: #{e.message}"
       raise "Failed to complete download task"
     end
+  end
+
+  def clone_git_repo(url, version, full_path)
+    raise 'Could not clone git repo' unless system("git clone #{url} --branch #{version} #{full_path}")
   end
 
   def download_file_http(url, full_path, count = 3)
