@@ -452,17 +452,7 @@ private
   def download_file_http(url, full_path, count = 3)
     filename = File.basename(full_path)
     with_tempfile(filename, full_path) do |temp_file|
-      progress = 0
-      total = 0
-      params = {
-        "Accept-Encoding" => 'identity',
-        :content_length_proc => lambda{|length| total = length },
-        :progress_proc => lambda{|bytes|
-          new_progress = (bytes * 100) / total
-          message "\rDownloading %s (%3d%%) " % [filename, new_progress]
-          progress = new_progress
-        }
-      }
+      params = {}
       proxy_uri = URI.parse(url).scheme.downcase == 'https' ?
                   ENV["https_proxy"] :
                   ENV["http_proxy"]
@@ -497,16 +487,7 @@ private
   def download_file_ftp(uri, full_path)
     filename = File.basename(uri.path)
     with_tempfile(filename, full_path) do |temp_file|
-      progress = 0
-      total = 0
-      params = {
-        :content_length_proc => lambda{|length| total = length },
-        :progress_proc => lambda{|bytes|
-          new_progress = (bytes * 100) / total
-          message "\rDownloading %s (%3d%%) " % [filename, new_progress]
-          progress = new_progress
-        }
-      }
+      params = {}
       if ENV["ftp_proxy"]
         _, userinfo, _p_host, _p_port = URI.split(ENV['ftp_proxy'])
         if userinfo
