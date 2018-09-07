@@ -252,7 +252,7 @@ private
       sig_file.write(file[:gpg][:signature])
       sig_file.close
 
-      raise "key download failed" unless system("gpg --keyserver pgpkeys.mit.edu --recv-key #{gpg[:key]} 2>&1")
+      raise "key download failed" unless system("gpg --keyserver keys.gnupg.net --recv-key #{gpg[:key]} 2>&1")
 
       fingerprint = `gpg --status-fd 1 --fingerprint #{gpg[:key]} 2>&1`
 
